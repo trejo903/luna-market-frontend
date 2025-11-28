@@ -9,6 +9,12 @@ type Categoria = {
   nombre: string;
 };
 
+type ImagenProducto = {
+  id: number;
+  url: string;
+  principal: boolean;
+};
+
 type Producto = {
   id: number;
   nombre: string;
@@ -16,6 +22,7 @@ type Producto = {
   cantidad: number;
   precio: string | number;
   categoria?: Categoria;
+  imagenes?: ImagenProducto[];
 };
 
 const API_URL =
@@ -34,12 +41,13 @@ export default function ProductosAdminPage() {
   const [loadingProductos, setLoadingProductos] = useState(true);
   const [productosError, setProductosError] = useState<string | null>(null);
 
-  /* MODAL CREACIÓN */
-  const [modalAbierto, setModalAbierto] = useState(false);
+  /* MODALES */
+  const [modalAbierto, setModalAbierto] = useState(false);           // formulario
+  const [modalResumenAbierto, setModalResumenAbierto] = useState(false); // resumen SKU
 
   /* FORMULARIO */
   const [nombre, setNombre] = useState("");
-  const [sku, setSku] = useState("");
+  const [sku, setSku] = useState(""); // aquí guardamos el SKU generado para mostrar en el resumen
   const [cantidad, setCantidad] = useState<number | "">("");
   const [precio, setPrecio] = useState<string>("");
   const [categoriaId, setCategoriaId] = useState("");
@@ -50,6 +58,9 @@ export default function ProductosAdminPage() {
   const [submitting, setSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  /* PRODUCTO CREADO PARA RESUMEN */
+  const [productoCreado, setProductoCreado] = useState<Producto | null>(null);
 
   /* ───── Helpers ───── */
 
@@ -89,10 +100,9 @@ export default function ProductosAdminPage() {
     }
   }
 
-  // resetear formulario
+  // resetear formulario (NO tocamos el SKU porque lo usamos en el resumen)
   const resetForm = () => {
     setNombre("");
-    setSku("");
     setCantidad("");
     setPrecio("");
     if (categorias.length > 0) setCategoriaId(String(categorias[0].id));
@@ -104,13 +114,22 @@ export default function ProductosAdminPage() {
   };
 
   const abrirModal = () => {
+    // empezamos con formulario limpio y sin SKU
+    setSku("");
     resetForm();
     setModalAbierto(true);
   };
 
   const cerrarModal = () => {
     resetForm();
+    setSku("");
     setModalAbierto(false);
+  };
+
+  const cerrarModalResumen = () => {
+    setModalResumenAbierto(false);
+    setProductoCreado(null);
+    setSku("");
   };
 
   /* ───── Effects iniciales ───── */
@@ -149,10 +168,6 @@ export default function ProductosAdminPage() {
       setErrorMsg("El nombre es obligatorio.");
       return;
     }
-    if (!sku || sku.length !== 6) {
-      setErrorMsg("El SKU debe tener exactamente 6 caracteres.");
-      return;
-    }
     if (
       cantidad === "" ||
       Number.isNaN(Number(cantidad)) ||
@@ -175,7 +190,7 @@ export default function ProductosAdminPage() {
 
       const formData = new FormData();
       formData.append("nombre", nombre.trim());
-      formData.append("sku", sku.toUpperCase());
+      // NO se envía sku, lo crea el backend
       formData.append("cantidad", String(cantidad || 0));
       formData.append("precio", String(precio));
       formData.append("categoriaId", categoriaId);
@@ -206,13 +221,25 @@ export default function ProductosAdminPage() {
         throw new Error(msg);
       }
 
+      // 👉 esperamos { msg, sku, producto }
       const data = await res.json();
-      setSuccessMsg(data.msg ?? "Producto creado correctamente.");
 
-      // recargar lista
+      const skuGenerado =
+        data.sku ?? data.producto?.sku ?? "";
+
+      if (skuGenerado) {
+        setSku(skuGenerado);
+      }
+
+      setProductoCreado(data.producto ?? null);
+
+      // recargar lista para ver el nuevo producto
       await loadProductos();
-      // cerrar modal después de guardar
-      cerrarModal();
+
+      // cerrar modal de creación y abrir modal de resumen
+      resetForm();         // limpia inputs
+      setModalAbierto(false);
+      setModalResumenAbierto(true);
     } catch (err: any) {
       setErrorMsg(err.message ?? "Ocurrió un error al crear el producto.");
     } finally {
@@ -271,7 +298,7 @@ export default function ProductosAdminPage() {
               <thead>
                 <tr className="border-b bg-gray-50 text-left text-[11px] md:text-xs text-gray-500 uppercase">
                   <th className="px-3 py-2">ID</th>
-                  <th className="px-3 py-2">Nombre</th>
+                  <th className="px-3 py-2">Producto</th>
                   <th className="px-3 py-2">SKU</th>
                   <th className="px-3 py-2">Categoría</th>
                   <th className="px-3 py-2">Cantidad</th>
@@ -279,28 +306,51 @@ export default function ProductosAdminPage() {
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {productos.map((p) => (
-                  <tr key={p.id} className="hover:bg-gray-50">
-                    <td className="px-3 py-2 text-[11px] md:text-xs font-mono text-gray-600">
-                      {p.id}
-                    </td>
-                    <td className="px-3 py-2 text-gray-800">{p.nombre}</td>
-                    <td className="px-3 py-2 font-mono text-gray-700">
-                      {p.sku}
-                    </td>
-                    <td className="px-3 py-2 text-gray-600">
-                      {p.categoria?.nombre ?? "—"}
-                    </td>
-                    <td className="px-3 py-2 text-gray-700">{p.cantidad}</td>
-                    <td className="px-3 py-2 text-gray-800 font-medium">
-                      ${" "}
-                      {Number(p.precio).toLocaleString("es-MX", {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </td>
-                  </tr>
-                ))}
+                {productos.map((p) => {
+                  const thumb = p.imagenes?.[0]?.url;
+                  return (
+                    <tr key={p.id} className="hover:bg-gray-50">
+                      <td className="px-3 py-2 text-[11px] md:text-xs font-mono text-gray-600">
+                        {p.id}
+                      </td>
+                      <td className="px-3 py-2">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-md border border-gray-200 bg-gray-50 overflow-hidden flex-shrink-0">
+                            {thumb ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={thumb}
+                                alt={p.nombre}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <div className="h-full w-full flex items-center justify-center text-[9px] text-gray-400">
+                                Sin imagen
+                              </div>
+                            )}
+                          </div>
+                          <span className="text-gray-800">{p.nombre}</span>
+                        </div>
+                      </td>
+                      <td className="px-3 py-2 font-mono text-gray-700">
+                        {p.sku}
+                      </td>
+                      <td className="px-3 py-2 text-gray-600">
+                        {p.categoria?.nombre ?? "—"}
+                      </td>
+                      <td className="px-3 py-2 text-gray-700">
+                        {p.cantidad}
+                      </td>
+                      <td className="px-3 py-2 text-gray-800 font-medium">
+                        $
+                        {Number(p.precio).toLocaleString("es-MX", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -330,16 +380,8 @@ export default function ProductosAdminPage() {
                 {errorMsg}
               </div>
             )}
-            {successMsg && (
-              <div className="mb-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] text-emerald-800">
-                {successMsg}
-              </div>
-            )}
 
-            <form
-              onSubmit={handleSubmit}
-              className="space-y-4 text-sm"
-            >
+            <form onSubmit={handleSubmit} className="space-y-4 text-sm">
               {/* Nombre */}
               <div className="space-y-1">
                 <label className="block text-xs font-medium text-gray-700">
@@ -358,49 +400,28 @@ export default function ProductosAdminPage() {
                 </p>
               </div>
 
-              {/* SKU y Cantidad */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="block text-xs font-medium text-gray-700">
-                    SKU
-                  </label>
-                  <input
-                    type="text"
-                    value={sku}
-                    onChange={(e) =>
-                      setSku(e.target.value.toUpperCase())
-                    }
-                    maxLength={6}
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900/60 font-mono"
-                    placeholder="ABC123"
-                  />
-                  <p className="text-[11px] text-gray-400">
-                    Código único de 6 caracteres.
-                  </p>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="block text-xs font-medium text-gray-700">
-                    Cantidad inicial
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={cantidad}
-                    onChange={(e) =>
-                      setCantidad(
-                        e.target.value === ""
-                          ? ""
-                          : Number(e.target.value),
-                      )
-                    }
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900/60"
-                    placeholder="0"
-                  />
-                  <p className="text-[11px] text-gray-400">
-                    Si lo dejas en blanco se tomará como 0.
-                  </p>
-                </div>
+              {/* Cantidad */}
+              <div className="space-y-1">
+                <label className="block text-xs font-medium text-gray-700">
+                  Cantidad inicial
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  value={cantidad}
+                  onChange={(e) =>
+                    setCantidad(
+                      e.target.value === ""
+                        ? ""
+                        : Number(e.target.value),
+                    )
+                  }
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900/60"
+                  placeholder="0"
+                />
+                <p className="text-[11px] text-gray-400">
+                  Si lo dejas en blanco se tomará como 0.
+                </p>
               </div>
 
               {/* Precio y Categoría */}
@@ -464,8 +485,8 @@ export default function ProductosAdminPage() {
                   className="block w-full text-xs text-gray-500 file:mr-3 file:rounded-md file:border file:border-gray-300 file:bg-white file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-gray-700 hover:file:bg-gray-50"
                 />
                 <p className="text-[11px] text-gray-400">
-                  Máximo 5 imágenes, 5 MB cada una. La primera se
-                  marcará como principal.
+                  Máximo 5 imágenes, 5 MB cada una. La primera se marcará como
+                  principal.
                 </p>
 
                 {previewUrls.length > 0 && (
@@ -504,6 +525,85 @@ export default function ProductosAdminPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL RESUMEN SKU */}
+      {modalResumenAbierto && productoCreado && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-md rounded-xl bg-white shadow-lg p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base md:text-lg font-semibold text-gray-800">
+                Producto creado
+              </h2>
+              <button
+                type="button"
+                onClick={cerrarModalResumen}
+                className="text-xs text-gray-500 hover:text-gray-800"
+              >
+                Cerrar
+              </button>
+            </div>
+
+            <div className="text-center space-y-1">
+              <p className="text-[11px] uppercase tracking-wide text-gray-500">
+                SKU asignado
+              </p>
+              <p className="text-2xl md:text-3xl font-mono font-semibold text-gray-900">
+                {sku || productoCreado.sku}
+              </p>
+            </div>
+
+            <div className="space-y-2 text-sm">
+              <p>
+                <span className="font-medium text-gray-700">Nombre: </span>
+                <span className="text-gray-800">{productoCreado.nombre}</span>
+              </p>
+            
+              <p>
+                <span className="font-medium text-gray-700">Precio: </span>
+                <span className="text-gray-800">
+                  $
+                  {Number(productoCreado.precio).toLocaleString("es-MX", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </span>
+              </p>
+              <p>
+                <span className="font-medium text-gray-700">Cantidad: </span>
+                <span className="text-gray-800">
+                  {productoCreado.cantidad}
+                </span>
+              </p>
+            </div>
+
+            {productoCreado.imagenes?.[0]?.url && (
+              <div className="pt-2">
+                <p className="text-[11px] text-gray-500 mb-1">
+                  Imagen principal:
+                </p>
+                <div className="h-32 w-full rounded-lg border border-gray-200 overflow-hidden bg-gray-50">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={productoCreado.imagenes[0].url}
+                    alt={productoCreado.nombre}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="pt-2 flex justify-end">
+              <button
+                type="button"
+                onClick={cerrarModalResumen}
+                className="rounded-md bg-gray-900 px-4 py-2 text-xs md:text-sm font-medium text-white hover:bg-black"
+              >
+                Entendido
+              </button>
+            </div>
           </div>
         </div>
       )}
