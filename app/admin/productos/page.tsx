@@ -315,7 +315,7 @@ export default function ProductosAdminPage() {
                       </td>
                       <td className="px-3 py-2">
                         <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-md border border-gray-200 bg-gray-50 overflow-hidden flex-shrink-0">
+                          <div className="h-10 w-10 rounded-md border border-gray-200 bg-gray-50 overflow-hidden shrink-0">
                             {thumb ? (
                               // eslint-disable-next-line @next/next/no-img-element
                               <img

@@ -1,4 +1,5 @@
 // app/components/Header.tsx
+import Link from "next/link";
 import { ShoppingCart, Heart, User, Search } from "lucide-react";
 
 export default function Header() {
@@ -7,9 +8,13 @@ export default function Header() {
       <div className="mx-auto max-w-6xl px-4 py-3 md:py-4">
         {/* FILA SUPERIOR MOBILE: logo + iconos */}
         <div className="flex items-center justify-between md:hidden">
-          <span className="text-lg font-semibold text-gray-900">
+          <Link
+            href="/"
+            className="text-lg font-semibold text-gray-900 hover:text-gray-700 transition-colors"
+          >
             Luna-market
-          </span>
+          </Link>
+
           <div className="flex items-center gap-3 text-gray-700">
             <button
               aria-label="Carrito"
@@ -35,9 +40,12 @@ export default function Header() {
         {/* FILA PRINCIPAL */}
         <div className="mt-2 flex items-center gap-3 md:mt-0 md:gap-4">
           {/* logo desktop */}
-          <span className="hidden text-lg md:block md:text-xl font-semibold text-gray-900">
+          <Link
+            href="/"
+            className="hidden md:block text-lg md:text-xl font-semibold text-gray-900 hover:text-gray-700 transition-colors"
+          >
             Luna-market
-          </span>
+          </Link>
 
           {/* buscador */}
           <div className="flex-1">
