@@ -1,8 +1,16 @@
 // app/components/Header.tsx
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import { ShoppingCart, Heart, User, Search } from "lucide-react";
 
 export default function Header() {
+  const [openUserMenu, setOpenUserMenu] = useState(false);
+
+  const toggleUserMenu = () => setOpenUserMenu((prev) => !prev);
+  const closeUserMenu = () => setOpenUserMenu(false);
+
   return (
     <header className="sticky top-0 z-20 border-b bg-white/90 backdrop-blur">
       <div className="mx-auto max-w-6xl px-4 py-3 md:py-4">
@@ -28,12 +36,44 @@ export default function Header() {
             >
               <Heart className="h-4 w-4" />
             </button>
-            <button
-              aria-label="Cuenta"
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 hover:bg-gray-50"
-            >
-              <User className="h-4 w-4" />
-            </button>
+
+            {/* USER MENU MOBILE */}
+            <div className="relative">
+              <button
+                type="button"
+                aria-label="Cuenta"
+                onClick={toggleUserMenu}
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 hover:bg-gray-50"
+              >
+                <User className="h-4 w-4" />
+              </button>
+
+              {openUserMenu && (
+                <div className="absolute right-0 mt-2 z-30 w-52 max-w-[230px] rounded-lg border bg-white shadow-lg text-sm text-gray-700">
+                  <Link
+                    href="/perfil"
+                    onClick={closeUserMenu}
+                    className="block px-4 py-2.5 hover:bg-gray-100"
+                  >
+                    Mi perfil
+                  </Link>
+                  <Link
+                    href="/pedidos"
+                    onClick={closeUserMenu}
+                    className="block px-4 py-2.5 hover:bg-gray-100"
+                  >
+                    Mis pedidos
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={closeUserMenu}
+                    className="block w-full text-left px-4 py-2.5 hover:bg-gray-100 text-red-600"
+                  >
+                    Cerrar sesión
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -73,12 +113,47 @@ export default function Header() {
             >
               <Heart className="h-4 w-4" />
             </button>
-            <button
-              aria-label="Cuenta"
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 hover:bg-gray-50"
-            >
-              <User className="h-4 w-4" />
-            </button>
+
+            {/* USER MENU DESKTOP */}
+            <div className="relative">
+              <button
+                type="button"
+                aria-label="Cuenta"
+                onClick={toggleUserMenu}
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 hover:bg-gray-50"
+              >
+                <User className="h-4 w-4" />
+              </button>
+
+              {openUserMenu && (
+                <div className="absolute right-0 mt-2 z-30 w-44 rounded-lg border bg-white shadow-lg text-sm text-gray-700">
+                  <div className="px-3 py-2 border-b text-xs text-gray-400">
+                    Cuenta
+                  </div>
+                  <Link
+                    href="/perfil"
+                    onClick={closeUserMenu}
+                    className="block px-3 py-2 hover:bg-gray-100"
+                  >
+                    Mi perfil
+                  </Link>
+                  <Link
+                    href="/pedidos"
+                    onClick={closeUserMenu}
+                    className="block px-3 py-2 hover:bg-gray-100"
+                  >
+                    Mis pedidos
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={closeUserMenu}
+                    className="block w-full text-left px-3 py-2 hover:bg-gray-100 text-red-600"
+                  >
+                    Cerrar sesión
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

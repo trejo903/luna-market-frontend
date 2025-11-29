@@ -1,6 +1,6 @@
 // app/components/Footer.tsx
 import { Facebook, Instagram, Music2 } from "lucide-react";
-
+import Link from "next/link";
 export default function Footer() {
   return (
     <footer className="mt-12 border-t bg-[#f0f0f0]">
@@ -42,15 +42,21 @@ export default function Footer() {
             </div>
 
             <div className="space-y-2 col-span-2 md:col-span-1">
-              <p className="font-semibold text-gray-900">Legal</p>
-              <button className="block hover:text-gray-900">
-                Aviso de privacidad
-              </button>
-              <button className="block hover:text-gray-900">
-                Términos y condiciones
-              </button>
-            </div>
-          </div>
+          <p className="font-semibold text-gray-900">Legal</p>
+          <Link
+            href="/legal/aviso-de-privacidad"
+            className="block text-sm text-gray-700 hover:text-gray-900"
+          >
+            Aviso de privacidad
+          </Link>
+          <Link
+            href="/legal/terminos-y-condiciones"
+            className="block text-sm text-gray-700 hover:text-gray-900"
+          >
+            Términos y condiciones
+          </Link>
+        </div>
+      </div>
 
           {/* Redes */}
           <div className="space-y-3">
